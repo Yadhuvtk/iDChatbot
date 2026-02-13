@@ -1,0 +1,467 @@
+import random
+import re
+from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple
+
+import pandas as pd
+import requests
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer, util
+
+# -----------------------------
+# CONFIGURATION
+# -----------------------------
+BASE_DIR = Path(__file__).parent
+
+# Intents (FAQ/KB) Excel
+EXCEL_PATH = BASE_DIR / "data" / "data.xlsx"
+SHEET_NAME = "Sheet1"
+
+# Employee Excel
+EMPLOYEE_EXCEL_PATH = BASE_DIR / "data" / "Employe.xlsx"
+EMPLOYEE_SHEET_NAME = "Sheet1"
+
+# STRICTER THRESHOLD FOR INTENTS
+MIN_SCORE = 0.55
+
+# OLLAMA CONFIG
+OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "mistral"
+
+# -----------------------------
+# MEMORY STORAGE
+# -----------------------------
+CHAT_HISTORY: Dict[str, List[str]] = {}
+
+# -----------------------------
+# HELPERS
+# -----------------------------
+def clean_text(s: Any) -> str:
+    if s is None:
+        return ""
+    return str(s).strip()
+
+def norm(s: Any) -> str:
+    return clean_text(s).lower()
+
+def safe_val(v: Any) -> str:
+    if v is None:
+        return ""
+    if isinstance(v, float) and pd.isna(v):
+        return ""
+    if pd.isna(v):
+        return ""
+    return str(v).strip()
+
+# -----------------------------
+# INTENTS LOADING
+# -----------------------------
+def load_intents():
+    if not EXCEL_PATH.exists():
+        print(f"CRITICAL ERROR: File not found at {EXCEL_PATH}")
+        return []
+
+    try:
+        df_raw = pd.read_excel(EXCEL_PATH, sheet_name=SHEET_NAME, header=None)
+    except Exception as e:
+        print(f"Error reading Excel: {e}")
+        return []
+
+    def hclean(x):
+        return str(x).replace("\ufeff", "").strip().lower() if x else ""
+
+    header_row_index = 0
+    found_header = False
+
+    # Auto-detect headers
+    for i in range(min(20, len(df_raw))):
+        row_values = [hclean(x) for x in df_raw.iloc[i].tolist()]
+        if "tag" in row_values and ("question" in row_values or any("pattern" in c for c in row_values)):
+            header_row_index = i
+            found_header = True
+            break
+
+    if not found_header:
+        print("ERROR: Headers (Tag, Question, Answer) not found in Excel.")
+        return []
+
+    headers = [hclean(x) for x in df_raw.iloc[header_row_index].tolist()]
+    df = df_raw.iloc[header_row_index + 1:].copy()
+    df.columns = headers
+    df = df.dropna(how="all").reset_index(drop=True)
+
+    question_cols = [c for c in df.columns if "question" in c or "pattern" in c]
+    answer_cols = [c for c in df.columns if "answer" in c or "response" in c]
+    tag_col = "tag"
+
+    intents = []
+    for index, row in df.iterrows():
+        tag = clean_text(row.get(tag_col))
+        questions = [clean_text(row.get(c)) for c in question_cols if clean_text(row.get(c))]
+        answers = [clean_text(row.get(c)) for c in answer_cols if clean_text(row.get(c))]
+
+        if not questions or not answers:
+            continue
+        if not tag or tag.lower() == "nan":
+            tag = f"auto_tag_{index}"
+
+        intents.append({"tag": tag, "patterns": questions, "responses": answers})
+
+    print(f"SUCCESS: Loaded {len(intents)} intents.")
+    return intents
+
+# -----------------------------
+# EMPLOYEE LOADING
+# -----------------------------
+EMP_DF: Optional[pd.DataFrame] = None
+
+def load_employees() -> Optional[pd.DataFrame]:
+    if not EMPLOYEE_EXCEL_PATH.exists():
+        print(f"WARNING: Employee file not found at {EMPLOYEE_EXCEL_PATH}")
+        return None
+
+    try:
+        df = pd.read_excel(EMPLOYEE_EXCEL_PATH, sheet_name=EMPLOYEE_SHEET_NAME)
+    except Exception as e:
+        print(f"Error reading Employee Excel: {e}")
+        return None
+
+    df.columns = [re.sub(r"\s+", " ", str(c)).strip() for c in df.columns]
+
+    col_map = {}
+    for c in df.columns:
+        lc = c.lower()
+        if lc in ["employeeid", "employee id", "empid", "emp id"]:
+            col_map[c] = "EmployeeID"
+        elif lc in ["name", "employee name"]:
+            col_map[c] = "Name"
+        elif lc in ["email", "mail", "e-mail"]:
+            col_map[c] = "Email"
+        elif lc in ["base salary", "basesalary", "salary", "base"]:
+            col_map[c] = "Base Salary"
+        elif lc in ["takeleave", "take leave", "taken leave", "leavetaken", "leave taken"]:
+            col_map[c] = "TakeLeave"
+        elif lc in ["availableleave", "available leave", "leave balance", "balance leave"]:
+            col_map[c] = "AvailableLeave"
+        elif lc in ["under", "manager", "reporting to", "reports to"]:
+            col_map[c] = "Under"
+        elif lc in ["designation", "role", "title"]:
+            col_map[c] = "Designation"
+        elif lc in ["sl", "sno", "sr", "serial"]:
+            col_map[c] = "SL"
+
+    df = df.rename(columns=col_map)
+
+    required = ["EmployeeID", "Name"]
+    for r in required:
+        if r not in df.columns:
+            print(f"WARNING: Employee file missing required column: {r}")
+            return None
+
+    df = df.dropna(how="all").reset_index(drop=True)
+    df["EmployeeID"] = df["EmployeeID"].astype(str).str.strip()
+    df["Name"] = df["Name"].astype(str).str.strip()
+
+    print(f"SUCCESS: Loaded {len(df)} employees.")
+    return df
+
+# -----------------------------
+# SEMANTIC MATCHING (INTENTS)
+# -----------------------------
+class IntentMatcher:
+    def __init__(self, intents: List[dict]):
+        self.intents = intents
+        self.pattern_texts = []
+        self.pattern_meta = []
+        if not intents:
+            return
+
+        print("Loading AI Model...")
+        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        for i, it in enumerate(intents):
+            for p in it["patterns"]:
+                self.pattern_texts.append(p)
+                self.pattern_meta.append((i, p))
+        self.pattern_embeddings = self.model.encode(self.pattern_texts, convert_to_tensor=True)
+        print("AI Model Ready.")
+
+    def match(self, user_text: str):
+        if not self.intents:
+            return None, 0.0, ""
+        query_embedding = self.model.encode(user_text, convert_to_tensor=True)
+        cos_scores = util.cos_sim(query_embedding, self.pattern_embeddings)[0]
+        best_idx = int(cos_scores.argmax())
+        # Return: Intent Dict, Score, Pattern String
+        return self.intents[self.pattern_meta[best_idx][0]], float(cos_scores[best_idx]), self.pattern_meta[best_idx][1]
+
+    def top_suggestions(self, user_text: str):
+        if not self.intents:
+            return []
+        query_embedding = self.model.encode(user_text, convert_to_tensor=True)
+        cos_scores = util.cos_sim(query_embedding, self.pattern_embeddings)[0]
+        top_results = cos_scores.argsort(descending=True)
+
+        out = []
+        seen = set()
+        for idx in top_results:
+            if float(cos_scores[idx]) < 0.2:
+                break
+            intent = self.intents[self.pattern_meta[int(idx)][0]]
+            if intent["tag"] in seen:
+                continue
+            seen.add(intent["tag"])
+            out.append({"intent": intent["tag"], "example": intent["patterns"][0]})
+            if len(out) >= 3:
+                break
+        return out
+
+# -----------------------------
+# STRICT GENERATION (REWORD ONLY)
+# -----------------------------
+def generate_strict_response(reference_answer: str, user_query: str, history: List[str]) -> str:
+    history_text = "\n".join(history[-6:])
+
+    prompt = f"""
+INSTRUCTION:
+You are a FACTUAL assistant.
+Your job is to answer the User Question using ONLY the KNOWLEDGE BASE below.
+
+KNOWLEDGE BASE: "{reference_answer}"
+User Question: "{user_query}"
+Chat Context: {history_text}
+
+STRICT RULES:
+1. If the KNOWLEDGE BASE contains the answer, rewrite it clearly and professionally.
+2. If the KNOWLEDGE BASE does NOT answer the specific question, you MUST say: "I am sorry, I don't have that information."
+3. Do NOT add outside facts. Do NOT guess.
+4. Do NOT make up URLs or Phone numbers.
+
+RESPONSE:
+"""
+    payload = {
+        "model": OLLAMA_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {"temperature": 0.0, "num_predict": 150},
+    }
+
+    try:
+        r = requests.post(OLLAMA_URL, json=payload, timeout=10)
+        res = r.json().get("response", "").strip()
+        res = res.strip('"').strip("'")
+        return res if res else reference_answer
+    except Exception:
+        return reference_answer
+
+# -----------------------------
+# EMPLOYEE QUERY LOGIC
+# -----------------------------
+EMP_KEYWORDS = {
+    "employee", "emp", "salary", "base salary", "pay", "ctc", "leave", "availableleave",
+    "takeleave", "email", "designation", "role", "manager", "under", "report", "reporting"
+}
+
+EMP_ID_REGEX = re.compile(r"\b[a-z]{2,10}\d+[a-z]?\d*\b", re.IGNORECASE)
+
+def looks_like_employee_question(msg: str) -> bool:
+    m = norm(msg)
+    if any(k in m for k in EMP_KEYWORDS):
+        return True
+    if EMP_ID_REGEX.search(msg):
+        return True
+    return False
+
+def find_employee_by_id(df: pd.DataFrame, msg: str) -> Optional[pd.Series]:
+    m = EMP_ID_REGEX.search(msg)
+    if not m:
+        return None
+    emp_id = m.group(0).strip()
+    hits = df[df["EmployeeID"].str.lower() == emp_id.lower()]
+    if len(hits) == 1:
+        return hits.iloc[0]
+    return None
+
+def find_employees_by_name(df: pd.DataFrame, msg: str) -> List[pd.Series]:
+    STOPWORDS = {
+        "what", "is", "the", "of", "a", "an", "to", "for", "please", "tell", "me",
+        "give", "show", "find", "employee", "emp", "id", "details", "info", "information",
+        "salary", "email", "leave", "designation", "manager", "under"
+    }
+
+    text = re.sub(r"[^a-zA-Z\s]", " ", msg).lower()
+    tokens = [t for t in text.split() if len(t) >= 3 and t not in STOPWORDS]
+
+    if not tokens:
+        return []
+
+    scored: List[Tuple[int, pd.Series]] = []
+    for _, row in df.iterrows():
+        name = str(row.get("Name", "")).lower()
+        score = sum(1 for t in tokens if t in name)
+        if score > 0:
+            scored.append((score, row))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [r for _, r in scored]
+
+
+def build_employee_kb(row: pd.Series) -> str:
+    parts = []
+    parts.append(f"EmployeeID: {safe_val(row.get('EmployeeID'))}")
+    parts.append(f"Name: {safe_val(row.get('Name'))}")
+
+    if "Email" in row.index:
+        parts.append(f"Email: {safe_val(row.get('Email'))}")
+    if "Base Salary" in row.index:
+        parts.append(f"Base Salary: {safe_val(row.get('Base Salary'))}")
+    if "TakeLeave" in row.index:
+        parts.append(f"TakeLeave: {safe_val(row.get('TakeLeave'))}")
+    if "AvailableLeave" in row.index:
+        parts.append(f"AvailableLeave: {safe_val(row.get('AvailableLeave'))}")
+    if "Under" in row.index:
+        parts.append(f"Under: {safe_val(row.get('Under'))}")
+    if "Designation" in row.index:
+        parts.append(f"Designation: {safe_val(row.get('Designation'))}")
+
+    return " | ".join([p for p in parts if p and not p.endswith(": ")])
+
+def handle_employee_query(df: pd.DataFrame, user_msg: str, history: List[str]) -> Optional[Dict[str, Any]]:
+    # ----------------------------------------------------
+    # NOTE: No changes here. Employee responses DO NOT return "source".
+    # ----------------------------------------------------
+    if df is None or df.empty:
+        return None
+
+    if not looks_like_employee_question(user_msg):
+        return None
+
+    # 1) Try ID
+    row = find_employee_by_id(df, user_msg)
+    if row is not None:
+        kb = build_employee_kb(row)
+        final = generate_strict_response(kb, user_msg, history)
+        return {
+            "content": final,
+            "match_type": "employee",
+            "employee_id": safe_val(row.get("EmployeeID")),
+            "name": safe_val(row.get("Name")),
+        }
+
+    # 2) Try name match
+    matches = find_employees_by_name(df, user_msg)
+    if len(matches) == 1:
+        row = matches[0]
+        kb = build_employee_kb(row)
+        final = generate_strict_response(kb, user_msg, history)
+        return {
+            "content": final,
+            "match_type": "employee",
+            "employee_id": safe_val(row.get("EmployeeID")),
+            "name": safe_val(row.get("Name")),
+        }
+
+    if len(matches) > 1:
+        short_list = []
+        for r in matches[:5]:
+            short_list.append({
+                "EmployeeID": safe_val(r.get("EmployeeID")),
+                "Name": safe_val(r.get("Name")),
+                "Designation": safe_val(r.get("Designation")) if "Designation" in r.index else ""
+            })
+        return {
+            "content": "I found multiple employees matching that name. Please specify the EmployeeID.",
+            "match_type": "employee_multiple",
+            "matches": short_list
+        }
+
+    return {
+        "content": "I am sorry, I couldn't find that employee in my database. Please provide the EmployeeID.",
+        "match_type": "employee_not_found"
+    }
+
+# -----------------------------
+# API ENDPOINTS
+# -----------------------------
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+INTENTS: List[Dict[str, Any]] = []
+MATCHER: Optional[IntentMatcher] = None
+
+@app.on_event("startup")
+def startup_event():
+    global INTENTS, MATCHER, EMP_DF
+    INTENTS = load_intents()
+    if INTENTS:
+        MATCHER = IntentMatcher(INTENTS)
+    else:
+        MATCHER = None
+
+    EMP_DF = load_employees()
+
+class ChatIn(BaseModel):
+    message: str
+    session_id: str = "default"
+
+@app.post("/chat")
+def chat(payload: ChatIn) -> Dict[str, Any]:
+    user_msg = payload.message.strip()
+    session_id = payload.session_id
+
+    if not user_msg:
+        return {"content": "Hello! How can I help?", "match_type": "none"}
+
+    if session_id not in CHAT_HISTORY:
+        CHAT_HISTORY[session_id] = []
+    current_history = CHAT_HISTORY[session_id]
+
+    # 1) EMPLOYEE HANDLER
+    if EMP_DF is not None:
+        emp_res = handle_employee_query(EMP_DF, user_msg, current_history)
+        if emp_res is not None:
+            # Note: No 'source' or 'matched_question' added here
+            CHAT_HISTORY[session_id].append(f"User: {user_msg}")
+            CHAT_HISTORY[session_id].append(f"AI: {emp_res.get('content','')}")
+            return emp_res
+
+    # 2) INTENT MATCHER (Fallback)
+    if not MATCHER:
+        return {"content": "System Error: Intents database not loaded.", "match_type": "error"}
+
+    intent, score, matched_pattern = MATCHER.match(user_msg)
+
+    if score < MIN_SCORE:
+        suggestions = MATCHER.top_suggestions(user_msg)
+        return {
+            "content": "I am sorry, I don't have information about that in my database.",
+            "match_type": "none",
+            "score": score,
+            "suggestions": suggestions,
+        }
+
+    raw_response = random.choice(intent["responses"])
+    final_response = generate_strict_response(raw_response, user_msg, current_history)
+
+    CHAT_HISTORY[session_id].append(f"User: {user_msg}")
+    CHAT_HISTORY[session_id].append(f"AI: {final_response}")
+
+    # ✅ UPDATED RETURN: Sending the 'raw_answer' (Excel Answer) too
+    return {
+        "content": final_response,
+        "match_type": "intent",
+        "subject": intent["tag"],
+        "score": score,
+        "source": intent["tag"],            
+        "matched_question": matched_pattern,
+        "raw_answer": raw_response  # <--- NEW FIELD: The exact answer from Excel
+    }
+
+# uvicorn app:app --host 0.0.0.0 --port 8000 --reload
