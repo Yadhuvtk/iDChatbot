@@ -11,4 +11,4 @@ from core.pipeline import SOPPipeline
 if __name__ == "__main__":
     print("🔧 Building FAISS index from converted.json...")
     SOPPipeline().build()
-    print("✅ Build completed successfully.")
+    print("Completed")

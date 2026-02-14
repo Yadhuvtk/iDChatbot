@@ -9,3 +9,102 @@ Please use Pantone 871.
 
 how to make chicken curry
 to make chicken curry bring chiken and go to chicken
+
+what is the spec for screenprint?
+Positive: 1 pt, Negative: 1.5–2 pt, Text: ~9 pt sans-serif. Prevents ink spread issues.
+
+What format should artwork be provided in when redrawing?
+All redrawn artwork must be supplied strictly as vector art. Vector artwork is resolution-independent and can be scaled without quality loss. Raster images can cause blurry edges, inaccurate line weights, and production failures.
+
+What are the preferred file formats for vector artwork?
+The approved formats are AI (Adobe Illustrator), EPS, and vector-based PDF. PDFs containing embedded raster images are not acceptable.
+
+How should fonts be handled in vector artwork?
+All fonts must be converted to outlines or paths before submission.
+
+Why must fonts be outlined before production?
+Vendors may not have the same fonts installed. Outlining prevents font substitution and layout issues and ensures the artwork prints exactly as approved.
+
+What color system should be used for imprinting artwork?
+Pantone Solid Coated (C) colors must be used for all imprint methods.
+
+Why should RGB and CMYK be avoided for screen and pad printing?
+RGB and CMYK are device-dependent systems. Screen and pad printing rely on mixed inks, which can cause color shifts if RGB or CMYK is used.
+
+When is CMYK acceptable?
+Only for full-color digital printing or heat transfer.
+
+Why are minimum line weights critical in screen printing?
+Ink spreads during printing, and thin lines may fill in or disappear.
+
+What are the minimum specs for notebook screen printing, and why?
+Positive: 1 pt, Negative: 1.5–2 pt, Text: ~9 pt sans-serif. This prevents ink spread issues.
+
+What are the minimum specs for apparel and tote screen printing?
+Positive: 1.5 pt, Negative: 2–3 pt, Text: 14 pt sans-serif.
+
+Why are gradients generally not allowed in screen printing?
+Gradients often appear banded or muddy. Only halftones are acceptable.
+
+What are halftones and why are 35–45 LPI recommended?
+Halftones simulate gradients using dots. 35–45 LPI balances detail and print stability.
+
+Why does pad printing require special design considerations?
+Pad printing involves curved surfaces where small details can distort.
+
+What are the minimum specs for pad printing and why?
+Positive: 1 pt, Negative: 1.5 pt, Text: 8–10 pt for clean transfer.
+
+Why should tight color registration be avoided in pad printing?
+Pad movement can cause misalignment between colors.
+
+What is color trapping and why is it important?
+Trapping overlaps colors slightly to prevent gaps caused by misregistration.
+
+Why does embroidery require extreme simplification?
+Artwork is converted into stitches, and fine details cannot be reproduced accurately.
+
+What are the minimum embroidery specs and their purpose?
+Letter height: 24 pt, Gap: 2.5 pt to maintain stitch clarity.
+
+Why are sans-serif or block fonts recommended for embroidery?
+Uniform strokes translate better into thread.
+
+How are small symbols like ® handled in embroidery?
+They are simplified or removed to maintain clarity.
+
+Why should laser engraving avoid ultra-thin lines?
+Thin lines engrave inconsistently and may appear as scratches.
+
+What are the recommended minimum specs for laser engraving?
+Positive: 0.5–1 pt, Negative: 0.5 pt, Text: 6 pt.
+
+Why does debossing require thicker artwork?
+Pressure can collapse thin lines.
+
+What are the minimum specs for debossing and embossing?
+Positive: 1–2 pt, Negative: 2 pt, Text: 12 pt.
+
+Why do internal counters often fill in during debossing?
+Soft materials compress and close small internal spaces.
+
+Why is heat transfer ideal for complex artwork?
+It supports fine details, gradients, and full color.
+
+What are the minimum specs for heat transfer artwork?
+Positive: 0.5 pt, Negative: 0.75 pt.
+
+Why do small floating elements need special treatment?
+They may peel or lift. Adding outlines or bleed improves durability.
+
+Why must artwork respect physical production limits?
+Ignoring limits causes print failures and rework.
+
+What font adjustments are typically required during redraws?
+Thicker strokes, simplification, or font replacement.
+
+How should colors be handled during redraws?
+Pantone colors must be assigned intentionally.
+
+Why is simplification essential for embroidery and embossing?
+Simplification ensures durability, readability, and clean production.
