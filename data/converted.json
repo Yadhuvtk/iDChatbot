@@ -1,0 +1,254 @@
+[
+  {
+    "id": "xl_0",
+    "tag": "nan",
+    "question": "What format should artwork be provided in when redrawing?",
+    "answer": "All redrawn artwork must be supplied strictly as vector art. Vector artwork is resolution-independent, meaning it can be scaled up or down without losing quality. This is critical for production because decoration methods like screen printing, embroidery, pad printing, and debossing rely on clean paths rather than pixels. Raster images (JPG, PNG, PSD) can cause blurry edges, inaccurate line weights, and production failures when scaled.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_1",
+    "tag": "nan",
+    "question": "What are the preferred file formats for vector artwork?",
+    "answer": "The approved file formats are AI (Adobe Illustrator), EPS, and vector-based PDF. These formats preserve editable paths, precise line weights, and accurate color data. PDFs containing embedded raster images are not acceptable.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_2",
+    "tag": "nan",
+    "question": "How should fonts be handled in vector artwork?",
+    "answer": "All fonts must be converted to outlines or paths before submission.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_3",
+    "tag": "nan",
+    "question": "Why must fonts be outlined before production?",
+    "answer": "Vendors may not have the same fonts installed. Leaving fonts live can cause substitutions and layout issues. Outlining guarantees the artwork prints exactly as approved.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_4",
+    "tag": "nan",
+    "question": "What color system should be used for imprinting artwork?",
+    "answer": "Pantone Solid Coated (C) colors must be used for all imprint methods.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_5",
+    "tag": "nan",
+    "question": "Why should RGB and CMYK be avoided for screen and pad printing?",
+    "answer": "RGB and CMYK are device-dependent systems. Screen and pad printing rely on mixed inks, which can cause color shifts if RGB/CMYK are used.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_6",
+    "tag": "nan",
+    "question": "When is CMYK acceptable?",
+    "answer": "Only for full-color digital printing or heat transfer.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_7",
+    "tag": "nan",
+    "question": "Why are minimum line weights critical in screen printing?",
+    "answer": "Ink spreads during printing. Thin lines may fill in or disappear.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_8",
+    "tag": "nan",
+    "question": "What are the minimum specs for notebook screen printing, and why?",
+    "answer": "Positive: 1 pt, Negative: 1.5–2 pt, Text: ~9 pt sans-serif. Prevents ink spread issues.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_9",
+    "tag": "nan",
+    "question": "What are the minimum specs for apparel and tote screen printing?",
+    "answer": "Positive: 1.5 pt, Negative: 2–3 pt, Text: 14 pt sans-serif.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_10",
+    "tag": "nan",
+    "question": "Why are gradients generally not allowed in screen printing?",
+    "answer": "Gradients appear banded or muddy. Only halftones are acceptable.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_11",
+    "tag": "nan",
+    "question": "What are halftones and why are 35–45 LPI recommended?",
+    "answer": "Halftones simulate gradients using dots. 35–45 LPI balances detail and stability.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_12",
+    "tag": "nan",
+    "question": "Why does pad printing require special design considerations?",
+    "answer": "Pad printing involves curved surfaces where small details can distort.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_13",
+    "tag": "nan",
+    "question": "What are the minimum specs for pad printing and why?",
+    "answer": "Positive: 1 pt, Negative: 1.5 pt, Text: 8–10 pt for clean transfer.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_14",
+    "tag": "nan",
+    "question": "Why should tight color registration be avoided in pad printing?",
+    "answer": "Pad movement can cause misalignment between colors.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_15",
+    "tag": "nan",
+    "question": "What is color trapping and why is it important?",
+    "answer": "Trapping overlaps colors slightly to prevent gaps from misregistration.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_16",
+    "tag": "nan",
+    "question": "Why does embroidery require extreme simplification?",
+    "answer": "Artwork is converted into stitches; fine details cannot be reproduced accurately.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_17",
+    "tag": "nan",
+    "question": "What are the minimum embroidery specs and their purpose?",
+    "answer": "Letter height: 24 pt, Gap: 2.5 pt for stitch clarity.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_18",
+    "tag": "nan",
+    "question": "Why are sans-serif or block fonts recommended for embroidery?",
+    "answer": "Uniform strokes translate better into thread.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_19",
+    "tag": "nan",
+    "question": "How are small symbols like ® handled in embroidery?",
+    "answer": "They are simplified or removed to maintain clarity.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_20",
+    "tag": "nan",
+    "question": "Why should laser engraving avoid ultra-thin lines?",
+    "answer": "Thin lines engrave inconsistently and may appear as scratches.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_21",
+    "tag": "nan",
+    "question": "What are the recommended minimum specs for laser engraving?",
+    "answer": "Positive: 0.5–1 pt, Negative: 0.5 pt, Text: 6 pt.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_22",
+    "tag": "nan",
+    "question": "Why does debossing require thicker artwork?",
+    "answer": "Pressure can collapse thin lines.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_23",
+    "tag": "nan",
+    "question": "What are the minimum specs for debossing and embossing?",
+    "answer": "Positive: 1–2 pt, Negative: 2 pt, Text: 12 pt.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_24",
+    "tag": "nan",
+    "question": "Why do internal counters often fill in during debossing?",
+    "answer": "Soft materials compress, closing small internal spaces.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_25",
+    "tag": "nan",
+    "question": "Why is heat transfer ideal for complex artwork?",
+    "answer": "Supports fine details, gradients, and full color.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_26",
+    "tag": "nan",
+    "question": "What are the minimum specs for heat transfer artwork?",
+    "answer": "Positive: 0.5 pt, Negative: 0.75 pt.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_27",
+    "tag": "nan",
+    "question": "Why do small floating elements need special treatment?",
+    "answer": "They may peel or lift; outlines or bleed improve durability.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_28",
+    "tag": "nan",
+    "question": "Why must artwork respect physical production limits?",
+    "answer": "Ignoring limits causes print failures and rework.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_29",
+    "tag": "nan",
+    "question": "What font adjustments are typically required during redraws?",
+    "answer": "Thicker strokes, simplification, or font replacement.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_30",
+    "tag": "nan",
+    "question": "How should colors be handled during redraws?",
+    "answer": "Pantone colors must be assigned intentionally.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "xl_31",
+    "tag": "nan",
+    "question": "Why is simplification essential for embroidery and embossing?",
+    "answer": "Ensures durability, readability, and clean production.",
+    "source_id": "xl_nan"
+  },
+  {
+    "id": "txt_0",
+    "tag": "txt_0",
+    "question": "What is the PMS value of silver standard?",
+    "answer": "Please use Pantone 877.",
+    "source_id": "txt_0"
+  },
+  {
+    "id": "txt_1",
+    "tag": "txt_1",
+    "question": "What is the minimum stroke thickness for negative space?",
+    "answer": "Minimum stroke thickness is 1.5 pt.",
+    "source_id": "txt_1"
+  },
+  {
+    "id": "txt_2",
+    "tag": "txt_2",
+    "question": "What is the PMS value of gold standard?",
+    "answer": "Please use Pantone 871.",
+    "source_id": "txt_2"
+  },
+  {
+    "id": "txt_3",
+    "tag": "txt_3",
+    "question": "how to make chicken curry",
+    "answer": "to make chicken curry bring chiken and go to chicken",
+    "source_id": "txt_3"
+  }
+]
