@@ -1,10 +1,11 @@
 # app.py (FULL BACKEND FILE)
 # ✅ BenChat SOPPipeline (FAISS + embed + rerank + typo normalization)
 # ✅ Employee details ONLY when user explicitly uses "@"
-# ✅ Gratitude replies (thanks/thank you/etc.) bypass KB + employee
-# ✅ LLM rewrites answers but guarantees key facts (Pantone, numbers)
+# ✅ Gratitude replies bypass KB + employee
+# ✅ LLM rewrites ALWAYS, but NEVER allowed to add facts
+# ✅ If pipeline truth answer is missing, uses deterministic fallback truth text
 # ✅ Keeps tooltip keys: source, matched_question, raw_answer
-# ✅ NEW: returns corrected_query + did_you_mean + corrections
+# ✅ Returns normalized_query + corrected_query + did_you_mean + corrections
 
 import random
 import re
@@ -78,15 +79,32 @@ def as_int_str(v: Any) -> str:
 # -----------------------------
 # GRATITUDE / SMALL TALK
 # -----------------------------
-THANK_KEYWORDS = {
-    "thanks", "thank you", "thx", "tq", "thanku", "ty",
-    "ok thanks", "thanks a lot", "thanks!", "cool thanks",
-    "great thanks", "awesome thanks", "ok thank you"
-}
+# -----------------------------
+# GRATITUDE / SMALL TALK (SAFE)
+# -----------------------------
+THANK_PATTERNS = [
+    r"\bthanks\b",
+    r"\bthank\s*you\b",
+    r"\bthx\b",
+    r"\btq\b",
+    r"\bthanku\b",
+    r"\bty\b",
+    r"\bok\s+thanks\b",
+    r"\bthanks\s+a\s+lot\b",
+    r"\bgreat\s+thanks\b",
+    r"\bawesome\s+thanks\b",
+    r"\bcool\s+thanks\b",
+]
+
+_thank_re = re.compile("|".join(THANK_PATTERNS), re.IGNORECASE)
 
 def is_thank_you_message(msg: str) -> bool:
-    m = (msg or "").lower().strip()
-    return any(k in m for k in THANK_KEYWORDS)
+    m = (msg or "").strip().lower()
+    # normalize punctuation to spaces (optional but helps)
+    m = re.sub(r"[^a-z0-9\s]", " ", m)
+    m = re.sub(r"\s+", " ", m).strip()
+    return bool(_thank_re.search(m))
+
 
 def thank_you_response() -> str:
     return random.choice([
@@ -96,6 +114,31 @@ def thank_you_response() -> str:
         "Glad I could help 👍",
         "No problem at all!",
     ])
+
+# -----------------------------
+# FRUSTRATION / ANNOYED MESSAGES
+# -----------------------------
+FRUSTRATION_PATTERNS = [
+    r"\bsorry\b", r"\bsoory\b", r"\bsry\b",
+    r"\bnot\s*working\b", r"\bdoesn[’']?t\s*work\b",
+    r"\bwrong\b", r"\bincorrect\b", r"\bbad\b",
+    r"\buseless\b", r"\bwaste\b", r"\bfrustrat(ed|ing)\b",
+    r"\bangry\b", r"\birritat(ed|ing)\b",
+    r"\bwhat\s+the\s+hell\b", r"\bwtf\b",
+]
+
+_frustration_re = re.compile("|".join(FRUSTRATION_PATTERNS), re.IGNORECASE)
+
+def is_frustrated_message(msg: str) -> bool:
+    m = (msg or "").strip().lower()
+    m = re.sub(r"[^a-z0-9\s]", " ", m)
+    m = re.sub(r"\s+", " ", m).strip()
+    return bool(_frustration_re.search(m))
+
+def frustrated_response() -> str:
+    return "Thank you for your patience. I’m still training. Please enter your review."
+
+
 
 # -----------------------------
 # LLM SAFETY
@@ -115,10 +158,12 @@ def extract_key_tokens(reference_answer: str) -> List[str]:
     ans = (reference_answer or "").lower()
     keys: List[str] = []
 
+    # numbers like 877 / 1.5 etc
     for m in re.findall(r"\b\d+(?:\.\d+)?\b", ans):
         if m not in keys:
             keys.append(m)
 
+    # important keywords
     for w in ["pantone", "pms", "pt", "inch", "inches"]:
         if w in ans and w not in keys:
             keys.append(w)
@@ -132,10 +177,38 @@ def rewritten_keeps_key_facts(rewritten: str, reference_answer: str) -> bool:
     r = (rewritten or "").lower()
     return all(k.lower() in r for k in keys)
 
+def choose_truth_text(result: Dict[str, Any]) -> str:
+    """
+    Always return a NON-EMPTY truth string.
+    Priority:
+      1) answer / raw_answer / response / content
+      2) deterministic fallback (no hallucination)
+    """
+    candidates = [
+        result.get("answer"),
+        result.get("raw_answer"),
+        result.get("response"),
+        result.get("content"),
+    ]
+    for c in candidates:
+        t = (c or "").strip()
+        if t:
+            return t
+
+    mq = (result.get("matched_question") or "").strip()
+    tag = (result.get("tag") or "").strip()
+
+    if mq:
+        return f"I could not find a stored answer for: {mq}"
+    if tag:
+        return f"I could not find a stored answer in category: {tag}"
+    return "I could not find a stored answer in the database."
+
 def rewrite_answer_with_llm(reference_answer: str, user_query: str, history: List[str], intent_tag: str = "") -> str:
+    # ✅ ALWAYS rewrite (never return apology here)
     reference_answer = (reference_answer or "").strip()
     if not reference_answer:
-        return "I am sorry, I don't have that information."
+        reference_answer = "I could not find a stored answer in the database."
 
     history_text = "\n".join(history[-6:])
     tag_hint = f'INTENT TAG: "{intent_tag}"\n' if intent_tag else ""
@@ -149,13 +222,13 @@ Rewrite the ANSWER into a single clear sentence.
 Inputs:
 {tag_hint}QUESTION: "{user_query}"
 ANSWER (source of truth): "{reference_answer}"
-CHAT CONTEXT: {history_text}
+CHAT CONTEXT:
+{history_text}
 
 STRICT RULES:
 - Use ONLY the information in ANSWER.
 - Keep all numbers/codes exactly (example: 877 must stay 877).
 - Do NOT add new facts.
-- Do NOT say you don't have information.
 - Output ONLY the rewritten sentence.
 """.strip()
 
@@ -167,22 +240,26 @@ STRICT RULES:
     }
 
     try:
-        r = requests.post(OLLAMA_URL, json=payload, timeout=10)
+        r = requests.post(OLLAMA_URL, json=payload, timeout=15)
         res = (r.json().get("response", "") or "").strip().strip('"').strip("'")
 
+        # If LLM gives apology / empty -> fallback to truth answer
         if contains_apology(res):
-            return reference_answer
+            res = reference_answer
 
+        # Too long -> fallback
         if len(res) > max(240, len(reference_answer) * 5):
-            return reference_answer
+            res = reference_answer
 
+        # Must keep key facts
         if not rewritten_keeps_key_facts(res, reference_answer):
-            return reference_answer
+            res = reference_answer
 
         if res and res[-1] not in ".!?":
             res += "."
 
         return res if res else reference_answer
+
     except Exception:
         return reference_answer
 
@@ -332,10 +409,12 @@ def startup_event():
 
     EMP_DF = load_employees()
 
-    # ✅ Pipeline now includes typo/punctuation normalization internally
     PIPELINE = SOPPipeline(accept_score=MIN_SCORE).load()
 
     print("✅ Startup complete.")
+    print("BASE_DIR:", BASE_DIR)
+    print("HAS converted.json:", (BASE_DIR / "data" / "converted.json").exists())
+    print("HAS sop_index.faiss:", (BASE_DIR / "data" / "sop_index.faiss").exists())
 
 @app.post("/chat")
 def chat(payload: ChatIn) -> Dict[str, Any]:
@@ -349,14 +428,14 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         CHAT_HISTORY[session_id] = []
     current_history = CHAT_HISTORY[session_id]
 
-    # ✅ 0) THANKS handler
+    # 0) THANKS handler
     if is_thank_you_message(user_msg):
         reply = thank_you_response()
         CHAT_HISTORY[session_id].append(f"User: {user_msg}")
         CHAT_HISTORY[session_id].append(f"AI: {reply}")
         return {"content": reply, "match_type": "small_talk"}
 
-    # ✅ 1) Employee ONLY when "@"
+    # 1) Employee ONLY when "@"
     if EMP_DF is not None:
         emp_res = handle_employee_query_only_at(EMP_DF, user_msg)
         if emp_res is not None:
@@ -364,36 +443,63 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
             CHAT_HISTORY[session_id].append(f"AI: {emp_res.get('content','')}")
             return emp_res
 
-    # ✅ 2) SOP Pipeline
+    # 2) SOP Pipeline
     if not PIPELINE:
         return {"content": "System Error: SOP pipeline not loaded.", "match_type": "error"}
 
     result = PIPELINE.query(user_msg)
+    
 
-    if result.get("rejected", False):
+
+        # ✅ 0.5) FRUSTRATION handler (bypass KB + employee)
+    if is_frustrated_message(user_msg):
+        reply = "Thank you for your patience. I’m still training. Please enter your review."
+
+        CHAT_HISTORY[session_id].append(f"User: {user_msg}")
+        CHAT_HISTORY[session_id].append(f"AI: {reply}")
+
         return {
-            "content": "I am sorry, I don't have information about that in my database.",
+            "content": reply,
+            "match_type": "intent",   # ✅ keep as intent so frontend treats as normal answer
+            "subject": "feedback_request",
+            "score": 1.0,
+            "source": "feedback_request",
+            "matched_question": user_msg,
+            "raw_answer": reply,
+        }
+
+
+     
+    if result.get("rejected", False):
+        # still rewrite a deterministic truth message (always rewrite requirement)
+        truth_answer = choose_truth_text(result)
+        final_response = rewrite_answer_with_llm(
+            reference_answer=truth_answer,
+            user_query=user_msg,
+            history=current_history,
+            intent_tag=result.get("tag", "")
+        )
+        return {
+            "content": final_response,
             "match_type": "none",
             "score": result.get("score", 0.0),
             "suggestions": [],
-            # typo info
+            "source": result.get("tag", ""),
+            "subject": result.get("tag", ""),
+            "matched_question": result.get("matched_question", ""),
+            "raw_answer": truth_answer,
             "normalized_query": result.get("normalized_query", ""),
             "corrected_query": result.get("corrected_query", ""),
             "did_you_mean": result.get("did_you_mean", None),
             "corrections": result.get("corrections", []),
         }
 
-    raw_answer = (
-    result.get("answer")
-    or result.get("raw_answer")
-    or result.get("response")
-    or result.get("content")
-    or ""
-).strip()
+    # ✅ ALWAYS build a non-empty truth answer
+    truth_answer = choose_truth_text(result)
 
-
+    # ✅ ALWAYS rewrite via LLM
     final_response = rewrite_answer_with_llm(
-        reference_answer=raw_answer,
+        reference_answer=truth_answer,
         user_query=user_msg,
         history=current_history,
         intent_tag=result.get("tag", "")
@@ -409,9 +515,7 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         "score": result.get("score", 0.0),
         "source": result.get("tag", ""),
         "matched_question": result.get("matched_question", ""),
-        "raw_answer": raw_answer,
-
-        # ✅ NEW: typo fix info (optional to show / log)
+        "raw_answer": truth_answer,
         "normalized_query": result.get("normalized_query", ""),
         "corrected_query": result.get("corrected_query", ""),
         "did_you_mean": result.get("did_you_mean", None),

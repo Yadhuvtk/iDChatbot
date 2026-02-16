@@ -60,7 +60,7 @@ OLLAMA_MODEL = "mistral"
 # ── Messages ──────────────────────────────────────────
 REJECTION_MESSAGE = (
     "This question is not covered in the SOP.\n"
-    "Please contact HR."
+    "Please Contact Ai Team for further assistance."
 )
 
 # ── Web UI ────────────────────────────────────────────
