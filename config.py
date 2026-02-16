@@ -55,7 +55,7 @@ FUSION_WEIGHTS = [0.5, 0.2, 0.3]
 USE_LLM_REWRITE = True
 OLLAMA_BASE_URL = "http://localhost:11434"
 # Using Qwen 2.5 (1.5B) - fast and accurate for rewriting
-OLLAMA_MODEL = "qwen2.5:1.5b" 
+OLLAMA_MODEL = "mistral" 
 
 # ── Messages ──────────────────────────────────────────
 REJECTION_MESSAGE = (

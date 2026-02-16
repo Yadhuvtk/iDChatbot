@@ -11,7 +11,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # --- BEN-CHAT INTEGRATION IMPORTS ---
 import config
-from core import rewriter
+import core.rewrite as rewriter
+
+
 # ------------------------------------
 
 from core.bge import BgeM3Embedder

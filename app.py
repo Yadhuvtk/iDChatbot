@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).parent
 EMPLOYEE_EXCEL_PATH = BASE_DIR / "data" / "Employe.xlsx"
 EMPLOYEE_SHEET_NAME = "Sheet1"
 
-MIN_SCORE = 0.55
+MIN_SCORE = 0.25
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "mistral"
@@ -383,7 +383,14 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
             "corrections": result.get("corrections", []),
         }
 
-    raw_answer = (result.get("answer", "") or "").strip()
+    raw_answer = (
+    result.get("answer")
+    or result.get("raw_answer")
+    or result.get("response")
+    or result.get("content")
+    or ""
+).strip()
+
 
     final_response = rewrite_answer_with_llm(
         reference_answer=raw_answer,
