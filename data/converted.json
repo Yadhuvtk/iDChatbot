@@ -495,5 +495,33 @@
     "question": "who is the quality manager in idynamics software india",
     "answer": "Smithy is the quality manager of idynamics software",
     "source_id": "txt_37"
+  },
+  {
+    "id": "txt_38",
+    "tag": "txt_38",
+    "question": "Hi",
+    "answer": "Hello! Nice to see you.",
+    "source_id": "txt_38"
+  },
+  {
+    "id": "txt_39",
+    "tag": "txt_39",
+    "question": "hy",
+    "answer": "Hello! How can I help?",
+    "source_id": "txt_39"
+  },
+  {
+    "id": "txt_40",
+    "tag": "txt_40",
+    "question": "Hello",
+    "answer": "Hello. How may I assist you today?",
+    "source_id": "txt_40"
+  },
+  {
+    "id": "txt_41",
+    "tag": "txt_41",
+    "question": "what is your name?",
+    "answer": "My name is iD Chat. Please let me know how I can assist you.",
+    "source_id": "txt_41"
   }
 ]

@@ -156,6 +156,69 @@ def frustrated_response() -> str:
     return "Thank you for your patience. I’m still training. Please enter your review."
 
 
+
+
+# -----------------------------
+# GREETINGS / HELLO (BYPASS KB)
+# -----------------------------
+GREET_PATTERNS = [
+    r"\bhi\b",
+    r"\bhello\b",
+    r"\bhey\b",
+    r"\bhai\b",
+    r"\bheya\b",
+    r"\byo\b",
+    r"\bgm\b",
+    r"\bgood\s*morning\b",
+    r"\bgn\b",
+    r"\bgood\s*night\b",
+    r"\bga\b",
+    r"\bgood\s*afternoon\b",
+    r"\bge\b",
+    r"\bgood\s*evening\b",
+    r"\bhow\s*are\s*you\b",
+    r"\bhow\s*r\s*u\b",
+    r"\bhow\s*are\s*u\b",
+    r"\bsup\b",
+    r"\bwhat'?s\s*up\b",
+]
+_greet_re = re.compile("|".join(GREET_PATTERNS), re.IGNORECASE)
+
+def normalize_for_greeting(msg: str) -> str:
+    m = (msg or "").strip().lower()
+    # remove punctuation/emojis, keep words
+    m = re.sub(r"[^a-z0-9\s]", " ", m)
+    m = re.sub(r"\s+", " ", m).strip()
+    return m
+
+def is_greeting_message(msg: str) -> bool:
+    m = normalize_for_greeting(msg)
+    if not m:
+        return False
+
+    # If message is mostly greeting words and very short, treat as greeting
+    tokens = m.split()
+    if len(tokens) <= 4:
+        return bool(_greet_re.search(m))
+
+    # Also allow greeting at start like "hi benchat"
+    if tokens and tokens[0] in {"hi", "hello", "hey", "hai"}:
+        return True
+
+    return bool(_greet_re.search(m)) and len(tokens) <= 7
+
+def greeting_response() -> str:
+    return random.choice([
+        "Hey! 👋 I’m iD Chat AI.",
+        "Hello! 😊 ",
+        "Hi there! 👋 What can I help you with today?",
+        "Hey! ",
+        "Hello! ",
+    ])
+
+
+
+
 # -----------------------------
 # KEYWORD-ONLY GUARD (YOUR REQUEST)
 # -----------------------------
@@ -547,7 +610,13 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         reply = thank_you_response()
         current_history.append(f"AI: {reply}")
         return {"content": reply, "match_type": "small_talk"}
-
+    
+        # 0.25) GREETING handler (bypass everything)
+    if is_greeting_message(user_msg):
+        reply = greeting_response()
+        current_history.append(f"AI: {reply}")
+        return {"content": reply, "match_type": "small_talk"}
+    
     # 0.5) FRUSTRATION handler (bypass everything)
     if is_frustrated_message(user_msg):
         reply = frustrated_response()
