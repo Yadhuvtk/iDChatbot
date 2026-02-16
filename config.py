@@ -59,7 +59,7 @@ OLLAMA_MODEL = "mistral"
 
 # ── Messages ──────────────────────────────────────────
 REJECTION_MESSAGE = (
-    "This question is not covered in the SOP.\n"
+    "This question is not provided in Database.\n"
     "Please Contact Ai Team for further assistance."
 )
 

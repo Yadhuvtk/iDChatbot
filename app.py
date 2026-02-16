@@ -2,10 +2,13 @@
 # ✅ BenChat SOPPipeline (FAISS + embed + rerank + typo normalization)
 # ✅ Employee details ONLY when user explicitly uses "@"
 # ✅ Gratitude replies bypass KB + employee
+# ✅ Frustration replies bypass KB + employee (fixed: runs BEFORE pipeline)
+# ✅ Keyword-only guard: if user types just "screenprint" / single keyword -> ask clarification (NO KB answer)
 # ✅ LLM rewrites ALWAYS, but NEVER allowed to add facts
 # ✅ If pipeline truth answer is missing, uses deterministic fallback truth text
 # ✅ Keeps tooltip keys: source, matched_question, raw_answer
 # ✅ Returns normalized_query + corrected_query + did_you_mean + corrections
+# ✅ Fixes indentation + unreachable code from your pasted file
 
 import random
 import re
@@ -28,6 +31,8 @@ BASE_DIR = Path(__file__).parent
 EMPLOYEE_EXCEL_PATH = BASE_DIR / "data" / "Employe.xlsx"
 EMPLOYEE_SHEET_NAME = "Sheet1"
 
+# Your original MIN_SCORE was 0.25 (very low).
+# Keeping it as-is, because you requested "full code", not tuning.
 MIN_SCORE = 0.25
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -52,6 +57,7 @@ def clean_text(s: Any) -> str:
         return ""
     return str(s).strip()
 
+
 def safe_val(v: Any) -> str:
     if v is None:
         return ""
@@ -63,6 +69,7 @@ def safe_val(v: Any) -> str:
     except Exception:
         pass
     return str(v).strip()
+
 
 def as_int_str(v: Any) -> str:
     s = safe_val(v)
@@ -76,9 +83,7 @@ def as_int_str(v: Any) -> str:
     except Exception:
         return s
 
-# -----------------------------
-# GRATITUDE / SMALL TALK
-# -----------------------------
+
 # -----------------------------
 # GRATITUDE / SMALL TALK (SAFE)
 # -----------------------------
@@ -95,39 +100,50 @@ THANK_PATTERNS = [
     r"\bawesome\s+thanks\b",
     r"\bcool\s+thanks\b",
 ]
-
 _thank_re = re.compile("|".join(THANK_PATTERNS), re.IGNORECASE)
+
 
 def is_thank_you_message(msg: str) -> bool:
     m = (msg or "").strip().lower()
-    # normalize punctuation to spaces (optional but helps)
     m = re.sub(r"[^a-z0-9\s]", " ", m)
     m = re.sub(r"\s+", " ", m).strip()
     return bool(_thank_re.search(m))
 
 
 def thank_you_response() -> str:
-    return random.choice([
-        "You're welcome! 😊",
-        "Happy to help!",
-        "Anytime! Let me know if you need anything else.",
-        "Glad I could help 👍",
-        "No problem at all!",
-    ])
+    return random.choice(
+        [
+            "You're welcome! 😊",
+            "Happy to help!",
+            "Anytime! Let me know if you need anything else.",
+            "Glad I could help 👍",
+            "No problem at all!",
+        ]
+    )
+
 
 # -----------------------------
 # FRUSTRATION / ANNOYED MESSAGES
 # -----------------------------
 FRUSTRATION_PATTERNS = [
-    r"\bsorry\b", r"\bsoory\b", r"\bsry\b",
-    r"\bnot\s*working\b", r"\bdoesn[’']?t\s*work\b",
-    r"\bwrong\b", r"\bincorrect\b", r"\bbad\b",
-    r"\buseless\b", r"\bwaste\b", r"\bfrustrat(ed|ing)\b",
-    r"\bangry\b", r"\birritat(ed|ing)\b",
-    r"\bwhat\s+the\s+hell\b", r"\bwtf\b",
+    r"\bsorry\b",
+    r"\bsoory\b",
+    r"\bsry\b",
+    r"\bnot\s*working\b",
+    r"\bdoesn[’']?t\s*work\b",
+    r"\bwrong\b",
+    r"\bincorrect\b",
+    r"\bbad\b",
+    r"\buseless\b",
+    r"\bwaste\b",
+    r"\bfrustrat(ed|ing)\b",
+    r"\bangry\b",
+    r"\birritat(ed|ing)\b",
+    r"\bwhat\s+the\s+hell\b",
+    r"\bwtf\b",
 ]
-
 _frustration_re = re.compile("|".join(FRUSTRATION_PATTERNS), re.IGNORECASE)
+
 
 def is_frustrated_message(msg: str) -> bool:
     m = (msg or "").strip().lower()
@@ -135,9 +151,80 @@ def is_frustrated_message(msg: str) -> bool:
     m = re.sub(r"\s+", " ", m).strip()
     return bool(_frustration_re.search(m))
 
+
 def frustrated_response() -> str:
     return "Thank you for your patience. I’m still training. Please enter your review."
 
+
+# -----------------------------
+# KEYWORD-ONLY GUARD (YOUR REQUEST)
+# -----------------------------
+QUESTION_HINTS = {
+    "spec",
+    "specs",
+    "size",
+    "minimum",
+    "min",
+    "font",
+    "pt",
+    "point",
+    "stroke",
+    "line",
+    "thickness",
+    "pms",
+    "pantone",
+    "color",
+    "area",
+    "imprint",
+    "method",
+    "screenprint",
+    "screen",
+    "print",
+    "embroidery",
+    "engrave",
+    "laser",
+    "dtf",
+    "dtg",
+}
+
+
+def tokenize(text: str) -> List[str]:
+    return re.findall(r"[a-zA-Z0-9]+", (text or "").lower().strip())
+
+
+def is_keyword_only(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return True
+    tokens = tokenize(t)
+    # 1 token like "screenprint" -> keyword only
+    if len(tokens) <= 1:
+        return True
+    return False
+
+
+def needs_clarification(text: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return True
+    tokens = set(tokenize(t))
+    # 1 token always clarify
+    if len(tokens) <= 1:
+        return True
+    # short + no "?" + no hints => clarify
+    if len(t) < 12 and "?" not in t and len(tokens.intersection(QUESTION_HINTS)) == 0:
+        return True
+    return False
+
+
+def clarification_message(keyword: str) -> str:
+    kw = (keyword or "").strip()
+    return (
+        f"I got **{kw}**. What exactly do you need?\n\n"
+        "Try one of these:\n"
+        "What is the spec for screenprint\n"
+        "What is screenprint?\n"
+    )
 
 
 # -----------------------------
@@ -148,11 +235,21 @@ def contains_apology(text: str) -> bool:
     if not t:
         return True
     bad_phrases = [
-        "i am sorry", "i'm sorry", "i dont have", "i don't have", "no information",
-        "cannot find", "can't find", "don't know", "do not know", "not in my database",
-        "i couldn't find", "couldn't find"
+        "i am sorry",
+        "i'm sorry",
+        "i dont have",
+        "i don't have",
+        "no information",
+        "cannot find",
+        "can't find",
+        "don't know",
+        "do not know",
+        "not in my database",
+        "i couldn't find",
+        "couldn't find",
     ]
     return any(p in t for p in bad_phrases)
+
 
 def extract_key_tokens(reference_answer: str) -> List[str]:
     ans = (reference_answer or "").lower()
@@ -170,12 +267,14 @@ def extract_key_tokens(reference_answer: str) -> List[str]:
 
     return keys
 
+
 def rewritten_keeps_key_facts(rewritten: str, reference_answer: str) -> bool:
     keys = extract_key_tokens(reference_answer)
     if not keys:
         return True
     r = (rewritten or "").lower()
     return all(k.lower() in r for k in keys)
+
 
 def choose_truth_text(result: Dict[str, Any]) -> str:
     """
@@ -204,7 +303,10 @@ def choose_truth_text(result: Dict[str, Any]) -> str:
         return f"I could not find a stored answer in category: {tag}"
     return "I could not find a stored answer in the database."
 
-def rewrite_answer_with_llm(reference_answer: str, user_query: str, history: List[str], intent_tag: str = "") -> str:
+
+def rewrite_answer_with_llm(
+    reference_answer: str, user_query: str, history: List[str], intent_tag: str = ""
+) -> str:
     # ✅ ALWAYS rewrite (never return apology here)
     reference_answer = (reference_answer or "").strip()
     if not reference_answer:
@@ -263,6 +365,7 @@ STRICT RULES:
     except Exception:
         return reference_answer
 
+
 # -----------------------------
 # EMPLOYEE LOADING
 # -----------------------------
@@ -314,6 +417,7 @@ def load_employees() -> Optional[pd.DataFrame]:
     print(f"SUCCESS: Loaded {len(df)} employees.")
     return df
 
+
 def build_employee_one_line(row: pd.Series) -> str:
     name = safe_val(row.get("Name"))
     designation = safe_val(row.get("Designation"))
@@ -341,6 +445,7 @@ def build_employee_one_line(row: pd.Series) -> str:
         sentence += "."
     return sentence
 
+
 def find_employee_by_name_best(df: pd.DataFrame, name: str) -> Optional[pd.Series]:
     q = re.sub(r"\s+", " ", name.strip()).lower()
     if not q:
@@ -360,6 +465,7 @@ def find_employee_by_name_best(df: pd.DataFrame, name: str) -> Optional[pd.Serie
             best_score = score
             best = row
     return best if best_score > 0 else None
+
 
 def handle_employee_query_only_at(df: pd.DataFrame, user_msg: str) -> Optional[Dict[str, Any]]:
     msg = clean_text(user_msg)
@@ -387,6 +493,7 @@ def handle_employee_query_only_at(df: pd.DataFrame, user_msg: str) -> Optional[D
         "name": safe_val(row.get("Name")),
     }
 
+
 # -----------------------------
 # API SETUP
 # -----------------------------
@@ -399,9 +506,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class ChatIn(BaseModel):
     message: str
     session_id: str = "default"
+
 
 @app.on_event("startup")
 def startup_event():
@@ -416,51 +525,36 @@ def startup_event():
     print("HAS converted.json:", (BASE_DIR / "data" / "converted.json").exists())
     print("HAS sop_index.faiss:", (BASE_DIR / "data" / "sop_index.faiss").exists())
 
+
 @app.post("/chat")
 def chat(payload: ChatIn) -> Dict[str, Any]:
-    user_msg = payload.message.strip()
-    session_id = payload.session_id
+    user_msg = (payload.message or "").strip()
+    session_id = (payload.session_id or "default").strip()
 
     if not user_msg:
         return {"content": "Hello! How can I help?", "match_type": "none"}
 
+    # init history
     if session_id not in CHAT_HISTORY:
         CHAT_HISTORY[session_id] = []
     current_history = CHAT_HISTORY[session_id]
 
-    # 0) THANKS handler
+    # store user line (for rewrite context)
+    current_history.append(f"User: {user_msg}")
+
+    # 0) THANKS handler (bypass everything)
     if is_thank_you_message(user_msg):
         reply = thank_you_response()
-        CHAT_HISTORY[session_id].append(f"User: {user_msg}")
-        CHAT_HISTORY[session_id].append(f"AI: {reply}")
+        current_history.append(f"AI: {reply}")
         return {"content": reply, "match_type": "small_talk"}
 
-    # 1) Employee ONLY when "@"
-    if EMP_DF is not None:
-        emp_res = handle_employee_query_only_at(EMP_DF, user_msg)
-        if emp_res is not None:
-            CHAT_HISTORY[session_id].append(f"User: {user_msg}")
-            CHAT_HISTORY[session_id].append(f"AI: {emp_res.get('content','')}")
-            return emp_res
-
-    # 2) SOP Pipeline
-    if not PIPELINE:
-        return {"content": "System Error: SOP pipeline not loaded.", "match_type": "error"}
-
-    result = PIPELINE.query(user_msg)
-    
-
-
-        # ✅ 0.5) FRUSTRATION handler (bypass KB + employee)
+    # 0.5) FRUSTRATION handler (bypass everything)
     if is_frustrated_message(user_msg):
-        reply = "Thank you for your patience. I’m still training. Please enter your review."
-
-        CHAT_HISTORY[session_id].append(f"User: {user_msg}")
-        CHAT_HISTORY[session_id].append(f"AI: {reply}")
-
+        reply = frustrated_response()
+        current_history.append(f"AI: {reply}")
         return {
             "content": reply,
-            "match_type": "intent",   # ✅ keep as intent so frontend treats as normal answer
+            "match_type": "intent",  # keep "intent" so frontend shows it normally
             "subject": "feedback_request",
             "score": 1.0,
             "source": "feedback_request",
@@ -468,17 +562,51 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
             "raw_answer": reply,
         }
 
+    # ✅ Keyword-only guard (YOUR MAIN REQUIREMENT)
+    # If user types just a keyword like "screenprint" -> do NOT answer from KB.
+    if is_keyword_only(user_msg) or needs_clarification(user_msg):
+        reply = clarification_message(user_msg)
+        current_history.append(f"AI: {reply}")
+        return {
+            "content": reply,
+            "match_type": "none",
+            "score": 0.0,
+            "source": "clarification",
+            "matched_question": "",
+            "raw_answer": reply,
+            "normalized_query": user_msg,
+            "corrected_query": user_msg,
+            "did_you_mean": None,
+            "corrections": [],
+        }
 
-     
+    # 1) Employee ONLY when "@"
+    if EMP_DF is not None:
+        emp_res = handle_employee_query_only_at(EMP_DF, user_msg)
+        if emp_res is not None:
+            current_history.append(f"AI: {emp_res.get('content','')}")
+            return emp_res
+
+    # 2) SOP Pipeline
+    if not PIPELINE:
+        err = "System Error: SOP pipeline not loaded."
+        current_history.append(f"AI: {err}")
+        return {"content": err, "match_type": "error"}
+
+    result = PIPELINE.query(user_msg)
+
+    # If rejected: still rewrite deterministic truth
     if result.get("rejected", False):
-        # still rewrite a deterministic truth message (always rewrite requirement)
         truth_answer = choose_truth_text(result)
         final_response = rewrite_answer_with_llm(
             reference_answer=truth_answer,
             user_query=user_msg,
             history=current_history,
-            intent_tag=result.get("tag", "")
+            intent_tag=result.get("tag", ""),
         )
+
+        current_history.append(f"AI: {final_response}")
+
         return {
             "content": final_response,
             "match_type": "none",
@@ -502,11 +630,10 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         reference_answer=truth_answer,
         user_query=user_msg,
         history=current_history,
-        intent_tag=result.get("tag", "")
+        intent_tag=result.get("tag", ""),
     )
 
-    CHAT_HISTORY[session_id].append(f"User: {user_msg}")
-    CHAT_HISTORY[session_id].append(f"AI: {final_response}")
+    current_history.append(f"AI: {final_response}")
 
     return {
         "content": final_response,
@@ -522,6 +649,7 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         "corrections": result.get("corrections", []),
     }
 
+
 @app.get("/employees")
 def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, le=200)):
     global EMP_DF
@@ -536,9 +664,11 @@ def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, l
     q_norm = (q or "").strip().lower()
     if q_norm:
         s = (
-            df["EmployeeID"].astype(str).str.lower().fillna("") + " " +
-            df["Name"].astype(str).str.lower().fillna("") + " " +
-            df["Email"].astype(str).str.lower().fillna("")
+            df["EmployeeID"].astype(str).str.lower().fillna("")
+            + " "
+            + df["Name"].astype(str).str.lower().fillna("")
+            + " "
+            + df["Email"].astype(str).str.lower().fillna("")
         )
         df = df[s.str.contains(re.escape(q_norm), na=False)]
 
@@ -546,13 +676,16 @@ def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, l
 
     out = []
     for _, r in df.iterrows():
-        out.append({
-            "employee_id": safe_val(r.get("EmployeeID")),
-            "name": safe_val(r.get("Name")),
-            "email": safe_val(r.get("Email")),
-        })
+        out.append(
+            {
+                "employee_id": safe_val(r.get("EmployeeID")),
+                "name": safe_val(r.get("Name")),
+                "email": safe_val(r.get("Email")),
+            }
+        )
 
     return {"ok": True, "data": out}
+
 
 # Run:
 # & 'e:\Yadhu Projects\Chatbot\runtime\python.exe' -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
