@@ -109,7 +109,7 @@ Pantone colors must be assigned intentionally.
 Why is simplification essential for embroidery and embossing?
 Simplification ensures durability, readability, and clean production.
 
-who is the quality manager in idynamics software india 
+who is the quality manager in idynamics software india
 Smithy is the quality manager of idynamics software
 
 Hi
@@ -124,3 +124,83 @@ Hello. How may I assist you today?
 what is your name?
 My name is iD Chat. Please let me know how I can assist you.
 
+What are bleed requirements for Showdown table throws?
+For the Showdown table throws, some mockups include a bleed area while others only have an imprint area. To avoid confusion: Throws with a bleed area: Bleed must be provided. Throws with only an imprint area: No bleed is required.
+
+Which one represents the actual size of the sticker?
+For stickers and custom cut stickers, the mockup shows three lines: Bleed area, Cut line, and Safe imprint area. The actual size of the sticker is defined by the cut line. For custom cut stickers, size is calculated from the cut line dimensions. Square inches formula: Height x Width. For each custom sticker, the cut line area must be below the specified square inches limit.
+
+What is the process for a Stony Brook University order?
+We need to send an email to the Art Team Lead and receive confirmation before proceeding further
+
+Are the vendor names Drum-Line and Drummond Printing the same?
+No, Drum-Line and Drummond Printing are not the same. Drum-Line requires the vendor file in PDF format, whereas Drummond Printing requires the file in EPS format.
+
+For 4imprint embroidery orders, can we use both Robinson and Madeira thread colors at the same time?
+Yes, Robinson and Madeira threads can be mixed and used together for embroidery.
+
+What is the update for the Deluxe 10' Event Tent?
+This product allows printing in up to four locations at one time. If the customer requires printing in eight locations, we will need to switch to a different product.
+
+Are two imprint color methods (PMS and embroidery thread) allowed in applique method?
+Yes, both colors are allowed.
+
+What should we check for a customsize sticker mockup?
+Check the final cut size and make sure it matches the given size range.
+
+What is the final process for a custom shape?
+Send to proof request for doublechecking.
+
+Can we use full ink coverage on seeded paper items?
+No, full or allover ink coverage is not recommended.
+
+Are we allowed to print the NCAA logo?
+No, if the NCAA logo is included without permission or a license, we cannot print it because that would be a trademark violation.
+
+What should we do if we receive an order with the UAW logo?
+If an order contains the UAW logo, send an email to 4imprint.
+
+Can we change or remove Life is Good stock artwork or imprint colors?
+No, Life is Good stock artwork cannot be changed or removed. If the customer does not want the logo, they must choose a different item.
+
+How should the U.S. flag be placed on sleeves?
+The layout is different for each sleeve. The stars should always face forward
+
+What is the latest update on the Twitter logo?
+If the old Twitter logo is being used, it is acceptable to update it to the new logo without customer or CSR confirmation.
+
+Can embroidery create gradient effects on new orders?
+No, embroidery cannot create gradient effects with thread on new orders. We recommend using a digital patch instead. However, we can do it if customer provide the AOF files and for reorders.
+
+What is the John Deere update?
+If the logo is not licensed, we cannot proceed. It must be properly licensed before production.
+
+How do we proceed when a customer wants unimprinted orders?
+The order must be cancelled and reentered as unimprinted.
+
+In umbrella orders (33010S42), should the umbrella color be shown in actualsize?
+Only the art should be shown. Do not show the panel or sleeve color. If the imprint is white, display the art in black only.
+
+What are the important art checks for Page Seed vendor orders?
+• Clean up the artwork whenever possible. • If using bitmap images, ensure they are 300 dpi and of good quality. • Avoid using clipping masks in bitmap files. • Convert the artwork to proper vector format whenever possible. • Ensure the artwork is in CMYK color mode. • Follow all proofing steps carefully to avoid production delays.
+
+What is the latest update for Heat transfer?
+• If you are using bitmaps, they should be placed inside a clipping mask. • All images must be good quality and in CMYK.
+
+What should be done if the artwork does not meet the imprint specification in a university orders?
+If under specs –email the rep to notify them of art below specs and places the order on hold and the rep will respond with new art or direction.
+
+Applique method specifications?
+Minimum of 3mm borders on applique pieces. Shapes that are less than 7mm wide will not qualify for applique.
+
+Which logos are we not allowed to use?
+The logos that are not allowed are Stony Brook, Harley Davidson, and Olympic logos.
+
+Which logos are allowed to use?
+Only properly licensed or approved logos can be used. The restricted logos include Stony Brook, Harley Davidson, and Olympic logos.
+    
+Which orders need to be moved inhouse?
+In Design orders, 4imprint screen-print, 4imprint DTG, Full color patch, 3D puff, personalization.
+
+Gill sticker white underlay method?
+These items will require a White underlay & we do need to show anything printing white as 4imprint white. White stickers do not need a white underlay.

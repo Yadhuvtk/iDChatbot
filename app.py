@@ -496,12 +496,11 @@ def build_employee_one_line(row: pd.Series) -> str:
     else:
         parts.append("This employee")
 
-    if salary:
-        parts.append(f"earning ₹{salary}")
+    
     if leave:
         parts.append(f"with {leave} days of leave remaining")
     if manager:
-        parts.append(f"reporting to {manager}")
+        parts.append(f"He/She is reporting to {manager}")
 
     sentence = ", ".join(parts).strip()
     if not sentence.endswith("."):
@@ -719,6 +718,54 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
     }
 
 
+@app.get("/autocomplete")
+def autocomplete(q: str = Query(default=""), limit: int = Query(default=8, ge=1, le=30)):
+    query = (q or "").strip().lower()
+    if len(query) < 2:
+        return {"ok": True, "data": []}
+
+    global PIPELINE
+    if PIPELINE is None or not getattr(PIPELINE, "items", None):
+        return {"ok": True, "data": []}
+
+    q_tokens = [t for t in re.findall(r"[a-z0-9]+", query) if len(t) > 1]
+    rows = []
+    seen = set()
+
+    for item in PIPELINE.items:
+        question = clean_text(getattr(item, "question", ""))
+        if not question:
+            continue
+
+        q_lower = question.lower()
+        if q_lower in seen:
+            continue
+
+        score = 0
+        if q_lower.startswith(query):
+            score = 300
+        elif query in q_lower:
+            score = 200
+        elif q_tokens and all(tok in q_lower for tok in q_tokens):
+            score = 100
+
+        if score <= 0:
+            continue
+
+        seen.add(q_lower)
+        rows.append(
+            {
+                "question": question,
+                "score": score,
+                "len": len(question),
+            }
+        )
+
+    rows.sort(key=lambda r: (-r["score"], r["len"], r["question"].lower()))
+    data = [{"question": r["question"]} for r in rows[:limit]]
+    return {"ok": True, "data": data}
+
+
 @app.get("/employees")
 def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, le=200)):
     global EMP_DF
@@ -757,4 +804,4 @@ def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, l
 
 
 # Run:
-# & 'e:\Yadhu Projects\Chatbot\runtime\python.exe' -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
+# & 'e:\Yadhu Projects\Chatbot\runtime\python.exe' -m uvicorn app:app --host 0.0.0.0 --port 8033 --reload

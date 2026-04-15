@@ -523,5 +523,194 @@
     "question": "what is your name?",
     "answer": "My name is iD Chat. Please let me know how I can assist you.",
     "source_id": "txt_41"
+  },
+  {
+    "id": "txt_42",
+    "tag": "txt_42",
+    "question": "What are bleed requirements for Showdown table throws?",
+    "answer": "For the Showdown table throws, some mockups include a bleed area while others only have an imprint area. To avoid confusion: Throws with a bleed area: Bleed must be provided. Throws with only an imprint area: No bleed is required.",
+    "source_id": "txt_42"
+  },
+  {
+    "id": "txt_43",
+    "tag": "txt_43",
+    "question": "Which one represents the actual size of the sticker?",
+    "answer": "For stickers and custom cut stickers, the mockup shows three lines: Bleed area, Cut line, and Safe imprint area. The actual size of the sticker is defined by the cut line. For custom cut stickers, size is calculated from the cut line dimensions. Square inches formula: Height x Width. For each custom sticker, the cut line area must be below the specified square inches limit.",
+    "source_id": "txt_43"
+  },
+  {
+    "id": "txt_44",
+    "tag": "txt_44",
+    "question": "What is the process for a Stony Brook University order?",
+    "answer": "We need to send an email to the Art Team Lead and receive confirmation before proceeding further",
+    "source_id": "txt_44"
+  },
+  {
+    "id": "txt_45",
+    "tag": "txt_45",
+    "question": "Are the vendor names Drum-Line and Drummond Printing the same?",
+    "answer": "No, Drum-Line and Drummond Printing are not the same. Drum-Line requires the vendor file in PDF format, whereas Drummond Printing requires the file in EPS format.",
+    "source_id": "txt_45"
+  },
+  {
+    "id": "txt_46",
+    "tag": "txt_46",
+    "question": "For 4imprint embroidery orders, can we use both Robinson and Madeira thread colors at the same time?",
+    "answer": "Yes, Robinson and Madeira threads can be mixed and used together for embroidery.",
+    "source_id": "txt_46"
+  },
+  {
+    "id": "txt_47",
+    "tag": "txt_47",
+    "question": "What is the update for the Deluxe 10' Event Tent?",
+    "answer": "This product allows printing in up to four locations at one time. If the customer requires printing in eight locations, we will need to switch to a different product.",
+    "source_id": "txt_47"
+  },
+  {
+    "id": "txt_48",
+    "tag": "txt_48",
+    "question": "Are two imprint color methods (PMS and embroidery thread) allowed in applique method?",
+    "answer": "Yes, both colors are allowed.",
+    "source_id": "txt_48"
+  },
+  {
+    "id": "txt_49",
+    "tag": "txt_49",
+    "question": "What should we check for a customsize sticker mockup?",
+    "answer": "Check the final cut size and make sure it matches the given size range.",
+    "source_id": "txt_49"
+  },
+  {
+    "id": "txt_50",
+    "tag": "txt_50",
+    "question": "What is the final process for a custom shape?",
+    "answer": "Send to proof request for doublechecking.",
+    "source_id": "txt_50"
+  },
+  {
+    "id": "txt_51",
+    "tag": "txt_51",
+    "question": "Can we use full ink coverage on seeded paper items?",
+    "answer": "No, full or allover ink coverage is not recommended.",
+    "source_id": "txt_51"
+  },
+  {
+    "id": "txt_52",
+    "tag": "txt_52",
+    "question": "Are we allowed to print the NCAA logo?",
+    "answer": "No, if the NCAA logo is included without permission or a license, we cannot print it because that would be a trademark violation.",
+    "source_id": "txt_52"
+  },
+  {
+    "id": "txt_53",
+    "tag": "txt_53",
+    "question": "What should we do if we receive an order with the UAW logo?",
+    "answer": "If an order contains the UAW logo, send an email to 4imprint.",
+    "source_id": "txt_53"
+  },
+  {
+    "id": "txt_54",
+    "tag": "txt_54",
+    "question": "Can we change or remove Life is Good stock artwork or imprint colors?",
+    "answer": "No, Life is Good stock artwork cannot be changed or removed. If the customer does not want the logo, they must choose a different item.",
+    "source_id": "txt_54"
+  },
+  {
+    "id": "txt_55",
+    "tag": "txt_55",
+    "question": "How should the U.S. flag be placed on sleeves?",
+    "answer": "The layout is different for each sleeve. The stars should always face forward",
+    "source_id": "txt_55"
+  },
+  {
+    "id": "txt_56",
+    "tag": "txt_56",
+    "question": "What is the latest update on the Twitter logo?",
+    "answer": "If the old Twitter logo is being used, it is acceptable to update it to the new logo without customer or CSR confirmation.",
+    "source_id": "txt_56"
+  },
+  {
+    "id": "txt_57",
+    "tag": "txt_57",
+    "question": "Can embroidery create gradient effects on new orders?",
+    "answer": "No, embroidery cannot create gradient effects with thread on new orders. We recommend using a digital patch instead. However, we can do it if customer provide the AOF files and for reorders.",
+    "source_id": "txt_57"
+  },
+  {
+    "id": "txt_58",
+    "tag": "txt_58",
+    "question": "What is the John Deere update?",
+    "answer": "If the logo is not licensed, we cannot proceed. It must be properly licensed before production.",
+    "source_id": "txt_58"
+  },
+  {
+    "id": "txt_59",
+    "tag": "txt_59",
+    "question": "How do we proceed when a customer wants unimprinted orders?",
+    "answer": "The order must be cancelled and reentered as unimprinted.",
+    "source_id": "txt_59"
+  },
+  {
+    "id": "txt_60",
+    "tag": "txt_60",
+    "question": "In umbrella orders (33010S42), should the umbrella color be shown in actualsize?",
+    "answer": "Only the art should be shown. Do not show the panel or sleeve color. If the imprint is white, display the art in black only.",
+    "source_id": "txt_60"
+  },
+  {
+    "id": "txt_61",
+    "tag": "txt_61",
+    "question": "What are the important art checks for Page Seed vendor orders?",
+    "answer": "• Clean up the artwork whenever possible. • If using bitmap images, ensure they are 300 dpi and of good quality. • Avoid using clipping masks in bitmap files. • Convert the artwork to proper vector format whenever possible. • Ensure the artwork is in CMYK color mode. • Follow all proofing steps carefully to avoid production delays.",
+    "source_id": "txt_61"
+  },
+  {
+    "id": "txt_62",
+    "tag": "txt_62",
+    "question": "What is the latest update for Heat transfer?",
+    "answer": "• If you are using bitmaps, they should be placed inside a clipping mask. • All images must be good quality and in CMYK.",
+    "source_id": "txt_62"
+  },
+  {
+    "id": "txt_63",
+    "tag": "txt_63",
+    "question": "What should be done if the artwork does not meet the imprint specification in a university orders?",
+    "answer": "If under specs –email the rep to notify them of art below specs and places the order on hold and the rep will respond with new art or direction.",
+    "source_id": "txt_63"
+  },
+  {
+    "id": "txt_64",
+    "tag": "txt_64",
+    "question": "Applique method specifications?",
+    "answer": "Minimum of 3mm borders on applique pieces. Shapes that are less than 7mm wide will not qualify for applique.",
+    "source_id": "txt_64"
+  },
+  {
+    "id": "txt_65",
+    "tag": "txt_65",
+    "question": "Which logos are we not allowed to use?",
+    "answer": "The logos that are not allowed are Stony Brook, Harley Davidson, and Olympic logos.",
+    "source_id": "txt_65"
+  },
+  {
+    "id": "txt_66",
+    "tag": "txt_66",
+    "question": "Which logos are allowed to use?",
+    "answer": "Only properly licensed or approved logos can be used. The restricted logos include Stony Brook, Harley Davidson, and Olympic logos.",
+    "source_id": "txt_66"
+  },
+  {
+    "id": "txt_67",
+    "tag": "txt_67",
+    "question": "Which orders need to be moved inhouse?",
+    "answer": "In Design orders, 4imprint screen-print, 4imprint DTG, Full color patch, 3D puff, personalization.",
+    "source_id": "txt_67"
+  },
+  {
+    "id": "txt_68",
+    "tag": "txt_68",
+    "question": "Gill sticker white underlay method?",
+    "answer": "These items will require a White underlay & we do need to show anything printing white as 4imprint white. White stickers do not need a white underlay.",
+    "source_id": "txt_68"
   }
 ]
