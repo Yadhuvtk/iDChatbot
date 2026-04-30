@@ -9,9 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# --- BEN-CHAT INTEGRATION IMPORTS ---
+# --- Integration Imports ---
 import config
-import core.rewrite as rewriter
 
 
 # ------------------------------------
@@ -252,7 +251,7 @@ class SOPPipeline:
     # -----------------------------
     def query(self, user_text: str) -> Dict[str, Any]:
         """
-        Executes the search pipeline with Ben-Chat's Zero Hallucination Logic.
+        Executes the search pipeline with strict rejection logic.
         """
         start_time = time.time()
         
@@ -324,20 +323,15 @@ class SOPPipeline:
                     "final_score": final_score,
                 }
 
-        # --- FINAL BEN-CHAT LOGIC ---
+        # --- Final Decision Logic ---
         
         # 4. Strict Hallucination Check
         if not best_item or best_rr < float(self.accept_score):
             return self._build_rejection_response(norm, best_rr)
 
-        # 5. LLM Rewriting (The "Human" Touch)
+        # 5. Final response is the matched KB answer (no LLM rewrite)
         raw_answer = best_item.answer
-        final_response = raw_answer # Default to raw text
-
-        if config.USE_LLM_REWRITE:
-            # We pass the question and the found fact to the LLM
-            # The LLM is instructed ONLY to rewrite, not invent.
-            final_response = rewriter.generate_response(qtext, raw_answer)
+        final_response = raw_answer
 
         return {
             "response": final_response, # The main answer for the UI

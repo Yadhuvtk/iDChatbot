@@ -51,8 +51,8 @@ TOP_K_FINAL = 1               # Final output
 # Fusion default weights: [dense, sparse, bm25]
 FUSION_WEIGHTS = [0.5, 0.2, 0.3]
 
-# ── LLM Rewrite (Ben-Chat Style) ──────────────────────
-USE_LLM_REWRITE = True
+# ── LLM Rewrite Style ──────────────────────
+USE_LLM_REWRITE = False
 OLLAMA_BASE_URL = "http://localhost:11434"
 # Using Qwen 2.5 (1.5B) - fast and accurate for rewriting
 OLLAMA_MODEL = "mistral" 

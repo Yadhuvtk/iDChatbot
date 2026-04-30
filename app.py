@@ -1,10 +1,10 @@
 # app.py (FULL BACKEND FILE)
-# ✅ BenChat SOPPipeline (FAISS + embed + rerank + typo normalization)
+# ✅ SOPPipeline (FAISS + embed + rerank + typo normalization)
 # ✅ Employee details ONLY when user explicitly uses "@"
 # ✅ Gratitude replies bypass KB + employee
 # ✅ Frustration replies bypass KB + employee (fixed: runs BEFORE pipeline)
 # ✅ Keyword-only guard: if user types just "screenprint" / single keyword -> ask clarification (NO KB answer)
-# ✅ LLM rewrites ALWAYS, but NEVER allowed to add facts
+# ✅ No LLM rewrite; returns KB truth text directly
 # ✅ If pipeline truth answer is missing, uses deterministic fallback truth text
 # ✅ Keeps tooltip keys: source, matched_question, raw_answer
 # ✅ Returns normalized_query + corrected_query + did_you_mean + corrections
@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 
 import pandas as pd
-import requests
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -34,9 +33,6 @@ EMPLOYEE_SHEET_NAME = "Sheet1"
 # Your original MIN_SCORE was 0.25 (very low).
 # Keeping it as-is, because you requested "full code", not tuning.
 MIN_SCORE = 0.25
-
-OLLAMA_URL = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "mistral"
 
 # -----------------------------
 # MEMORY STORAGE
@@ -201,7 +197,7 @@ def is_greeting_message(msg: str) -> bool:
     if len(tokens) <= 4:
         return bool(_greet_re.search(m))
 
-    # Also allow greeting at start like "hi benchat"
+    # Also allow greeting at start like "hi chatbot"
     if tokens and tokens[0] in {"hi", "hello", "hey", "hai"}:
         return True
 
@@ -291,54 +287,8 @@ def clarification_message(keyword: str) -> str:
 
 
 # -----------------------------
-# LLM SAFETY
+# RESPONSE HELPERS
 # -----------------------------
-def contains_apology(text: str) -> bool:
-    t = (text or "").strip().lower()
-    if not t:
-        return True
-    bad_phrases = [
-        "i am sorry",
-        "i'm sorry",
-        "i dont have",
-        "i don't have",
-        "no information",
-        "cannot find",
-        "can't find",
-        "don't know",
-        "do not know",
-        "not in my database",
-        "i couldn't find",
-        "couldn't find",
-    ]
-    return any(p in t for p in bad_phrases)
-
-
-def extract_key_tokens(reference_answer: str) -> List[str]:
-    ans = (reference_answer or "").lower()
-    keys: List[str] = []
-
-    # numbers like 877 / 1.5 etc
-    for m in re.findall(r"\b\d+(?:\.\d+)?\b", ans):
-        if m not in keys:
-            keys.append(m)
-
-    # important keywords
-    for w in ["pantone", "pms", "pt", "inch", "inches"]:
-        if w in ans and w not in keys:
-            keys.append(w)
-
-    return keys
-
-
-def rewritten_keeps_key_facts(rewritten: str, reference_answer: str) -> bool:
-    keys = extract_key_tokens(reference_answer)
-    if not keys:
-        return True
-    r = (rewritten or "").lower()
-    return all(k.lower() in r for k in keys)
-
-
 def choose_truth_text(result: Dict[str, Any]) -> str:
     """
     Always return a NON-EMPTY truth string.
@@ -366,67 +316,6 @@ def choose_truth_text(result: Dict[str, Any]) -> str:
         return f"I could not find a stored answer in category: {tag}"
     return "I could not find a stored answer in the database."
 
-
-def rewrite_answer_with_llm(
-    reference_answer: str, user_query: str, history: List[str], intent_tag: str = ""
-) -> str:
-    # ✅ ALWAYS rewrite (never return apology here)
-    reference_answer = (reference_answer or "").strip()
-    if not reference_answer:
-        reference_answer = "I could not find a stored answer in the database."
-
-    history_text = "\n".join(history[-6:])
-    tag_hint = f'INTENT TAG: "{intent_tag}"\n' if intent_tag else ""
-
-    prompt = f"""
-You are a factual assistant.
-
-Task:
-Rewrite the ANSWER into a single clear sentence.
-
-Inputs:
-{tag_hint}QUESTION: "{user_query}"
-ANSWER (source of truth): "{reference_answer}"
-CHAT CONTEXT:
-{history_text}
-
-STRICT RULES:
-- Use ONLY the information in ANSWER.
-- Keep all numbers/codes exactly (example: 877 must stay 877).
-- Do NOT add new facts.
-- Output ONLY the rewritten sentence.
-""".strip()
-
-    payload = {
-        "model": OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {"temperature": 0.0, "num_predict": 80},
-    }
-
-    try:
-        r = requests.post(OLLAMA_URL, json=payload, timeout=15)
-        res = (r.json().get("response", "") or "").strip().strip('"').strip("'")
-
-        # If LLM gives apology / empty -> fallback to truth answer
-        if contains_apology(res):
-            res = reference_answer
-
-        # Too long -> fallback
-        if len(res) > max(240, len(reference_answer) * 5):
-            res = reference_answer
-
-        # Must keep key facts
-        if not rewritten_keeps_key_facts(res, reference_answer):
-            res = reference_answer
-
-        if res and res[-1] not in ".!?":
-            res += "."
-
-        return res if res else reference_answer
-
-    except Exception:
-        return reference_answer
 
 
 # -----------------------------
@@ -601,7 +490,7 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
         CHAT_HISTORY[session_id] = []
     current_history = CHAT_HISTORY[session_id]
 
-    # store user line (for rewrite context)
+    # store user line in session history
     current_history.append(f"User: {user_msg}")
 
     # 0) THANKS handler (bypass everything)
@@ -663,15 +552,10 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
 
     result = PIPELINE.query(user_msg)
 
-    # If rejected: still rewrite deterministic truth
+    # If rejected: return deterministic truth text
     if result.get("rejected", False):
         truth_answer = choose_truth_text(result)
-        final_response = rewrite_answer_with_llm(
-            reference_answer=truth_answer,
-            user_query=user_msg,
-            history=current_history,
-            intent_tag=result.get("tag", ""),
-        )
+        final_response = truth_answer
 
         current_history.append(f"AI: {final_response}")
 
@@ -693,13 +577,8 @@ def chat(payload: ChatIn) -> Dict[str, Any]:
     # ✅ ALWAYS build a non-empty truth answer
     truth_answer = choose_truth_text(result)
 
-    # ✅ ALWAYS rewrite via LLM
-    final_response = rewrite_answer_with_llm(
-        reference_answer=truth_answer,
-        user_query=user_msg,
-        history=current_history,
-        intent_tag=result.get("tag", ""),
-    )
+    # Return pipeline truth text directly (no rewrite layer)
+    final_response = truth_answer
 
     current_history.append(f"AI: {final_response}")
 
@@ -805,3 +684,4 @@ def employees(q: str = Query(default=""), limit: int = Query(default=30, ge=1, l
 
 # Run:
 # & 'e:\Yadhu Projects\Chatbot\runtime\python.exe' -m uvicorn app:app --host 0.0.0.0 --port 8033 --reload
+
